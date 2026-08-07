@@ -1,0 +1,333 @@
+const $ = (selector) => document.querySelector(selector);
+const STORAGE_KEY = "society-organizer-v1";
+const protectedPlayers = new Set(["leonardo", "fabricio", "lemao"]);
+const supabaseConfig = window.SUPABASE_CONFIG || {};
+const isSupabaseConfigured = supabaseConfig.url?.startsWith("https://")
+  && supabaseConfig.publishableKey
+  && !supabaseConfig.publishableKey.includes("COLE_AQUI");
+const supabaseClient = isSupabaseConfigured && window.supabase
+  ? window.supabase.createClient(supabaseConfig.url, supabaseConfig.publishableKey)
+  : null;
+
+let lastPlayers = [];
+let lastTeamCount = 0;
+let currentUser = null;
+let saveTimer = null;
+let authMode = "login";
+
+const normalize = (value) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
+const money = (value) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(value) || 0);
+const readNumber = (value) => Math.max(0, Number.parseFloat(value) || 0);
+
+function parsePlayers() {
+  return $("#players").value.split("\n")
+    .map((line) => line.replace(/^\s*\d+\s*[-.)]?\s*/, "").trim())
+    .filter(Boolean);
+}
+
+function shuffle(list) {
+  const copy = [...list];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
+function makeTeams(players, teamCount) {
+  const rafael = players.find((name) => normalize(name) === "rafael");
+  const restricted = players.filter((name) => protectedPlayers.has(normalize(name)));
+  const others = players.filter((name) => name !== rafael && !restricted.includes(name));
+  const teams = Array.from({ length: teamCount }, () => []);
+
+  if (rafael) teams[Math.floor(Math.random() * teamCount)].push(rafael);
+  const rafaelTeam = teams.findIndex((team) => team.includes(rafael));
+  const eligibleTeams = teams.map((_, index) => index).filter((index) => index !== rafaelTeam);
+
+  const addBalanced = (name, allowedIndexes) => {
+    const minimum = Math.min(...allowedIndexes.map((index) => teams[index].length));
+    const options = allowedIndexes.filter((index) => teams[index].length === minimum);
+    teams[options[Math.floor(Math.random() * options.length)]].push(name);
+  };
+
+  shuffle(restricted).forEach((name) => addBalanced(name, rafael ? eligibleTeams : teams.map((_, index) => index)));
+  shuffle(others).forEach((name) => addBalanced(name, teams.map((_, index) => index)));
+  return teams;
+}
+
+function renderTeams(teams) {
+  const container = $("#teams");
+  container.innerHTML = "";
+  $("#drawMessage").style.display = "none";
+  teams.forEach((team, index) => {
+    const card = document.createElement("article");
+    card.className = "team";
+    card.innerHTML = `<h4>Time ${index + 1}<span class="team-size">${team.length} jogadores</span></h4><ol>${team.map((name) => `<li>${escapeHtml(name)}</li>`).join("")}</ol>`;
+    container.append(card);
+  });
+}
+
+function escapeHtml(value) { return value.replace(/[&<>'"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[char]); }
+
+function drawTeams() {
+  const players = parsePlayers();
+  const teamCount = Number($("#teamCount").value);
+  if (players.length < teamCount) return showDrawMessage("Adicione pelo menos um jogador para cada time.");
+  if (teamCount === 1 && players.some((name) => normalize(name) === "rafael") && players.some((name) => protectedPlayers.has(normalize(name)))) {
+    return showDrawMessage("Com 1 time não é possível respeitar a restrição do Rafael.");
+  }
+  lastPlayers = players;
+  lastTeamCount = teamCount;
+  renderTeams(makeTeams(players, teamCount));
+  $("#redrawButton").disabled = false;
+}
+
+function showDrawMessage(message) {
+  $("#teams").innerHTML = "";
+  const el = $("#drawMessage");
+  el.textContent = message;
+  el.style.display = "grid";
+}
+
+function currentMonthKey() {
+  const today = new Date();
+  return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function monthName(key) {
+  const [year, month] = key.split("-").map(Number);
+  return new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(new Date(year, month - 1, 1));
+}
+
+function shiftMonth(key, amount) {
+  const [year, month] = key.split("-").map(Number);
+  const date = new Date(year, month - 1 + amount, 1);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
+let activeMonth = currentMonthKey();
+let financeStore = { version: 2, months: {} };
+
+function emptyMonth() { return { monthlyFee: "", members: [], guests: [] }; }
+
+function ensureMonth(key) {
+  if (financeStore.months[key]) return financeStore.months[key];
+  const earlierMonths = Object.keys(financeStore.months).filter((month) => month < key).sort();
+  const previous = financeStore.months[earlierMonths.at(-1)];
+  financeStore.months[key] = {
+    ...emptyMonth(),
+    // Ao abrir um novo mês, a lista de mensalistas é reaproveitada sem pagamentos.
+    members: previous ? previous.members.map((person) => ({ name: person.name, payment: 0 })) : [],
+  };
+  return financeStore.months[key];
+}
+
+function getRows(type) {
+  return [...document.querySelectorAll(`#${type === "member" ? "members" : "guests"} .person-row`)].map((row) => ({
+    name: row.querySelector(".person-name").value.trim(),
+    payment: readNumber(row.querySelector(".person-payment").value),
+  }));
+}
+
+function saveFinance() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(financeStore));
+  if (!currentUser || !supabaseClient) return;
+  window.clearTimeout(saveTimer);
+  saveTimer = window.setTimeout(saveFinanceToCloud, 600);
+}
+
+async function saveFinanceToCloud() {
+  if (!currentUser || !supabaseClient) return;
+  const snapshot = JSON.parse(JSON.stringify(financeStore));
+  const { error } = await supabaseClient.from("society_data").upsert({
+    user_id: currentUser.id,
+    data: snapshot,
+    updated_at: new Date().toISOString(),
+  }, { onConflict: "user_id" });
+  if (error) console.error("Não foi possível salvar os dados no Supabase:", error.message);
+}
+
+function updateSummary(month) {
+  const totalMembers = month.members.reduce((sum, person) => sum + person.payment, 0);
+  const totalGuests = month.guests.reduce((sum, person) => sum + person.payment, 0);
+  $("#monthlyReceived").textContent = money(totalMembers);
+  $("#guestReceived").textContent = money(totalGuests);
+  $("#cashTotal").textContent = money(totalGuests);
+  $("#monthlyProgress").textContent = `${month.members.length} mensalista${month.members.length === 1 ? "" : "s"} cadastrado${month.members.length === 1 ? "" : "s"}`;
+  $("#guestProgress").textContent = `${month.guests.length} avulso${month.guests.length === 1 ? "" : "s"} cadastrado${month.guests.length === 1 ? "" : "s"}`;
+  $("#membersEmpty").style.display = month.members.length ? "none" : "block";
+  $("#guestsEmpty").style.display = month.guests.length ? "none" : "block";
+}
+
+function updateFinance() {
+  const month = ensureMonth(activeMonth);
+  month.monthlyFee = $("#monthlyFee").value;
+  month.members = getRows("member");
+  month.guests = getRows("guest");
+  updateSummary(month);
+  saveFinance();
+}
+
+function addPerson(type, values = {}, shouldUpdate = true) {
+  const row = $("#personTemplate").content.firstElementChild.cloneNode(true);
+  row.querySelector(".person-name").value = values.name || "";
+  row.querySelector(".person-payment").value = values.payment || "";
+  row.addEventListener("input", updateFinance);
+  row.querySelector(".delete-button").addEventListener("click", () => { row.remove(); updateFinance(); });
+  $(type === "member" ? "#members" : "#guests").append(row);
+  if (shouldUpdate) updateFinance();
+}
+
+function renderFinance() {
+  const month = ensureMonth(activeMonth);
+  $("#selectedMonth").value = activeMonth;
+  $("#selectedMonthLabel").textContent = `Caixa de ${monthName(activeMonth)}`;
+  $("#monthlyFee").value = month.monthlyFee || "";
+  $("#members").innerHTML = "";
+  $("#guests").innerHTML = "";
+  month.members.forEach((person) => addPerson("member", person, false));
+  month.guests.forEach((person) => addPerson("guest", person, false));
+  updateSummary(month);
+}
+
+function setActiveMonth(key) {
+  if (!/^\d{4}-\d{2}$/.test(key)) return;
+  activeMonth = key;
+  renderFinance();
+  saveFinance();
+}
+
+function loadFinanceLegacy() {
+  try {
+    const data = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if (data?.months) financeStore = data;
+    // Migra automaticamente os dados salvos na primeira versão para o mês atual.
+    else if (data) financeStore.months[activeMonth] = { monthlyFee: data.monthlyFee || "", members: data.members || [], guests: data.guests || [] };
+  } catch { financeStore = { version: 2, months: {} }; }
+  renderFinance();
+}
+
+function getLocalFinance() {
+  try {
+    const data = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if (data?.months) return data;
+    if (data) return { version: 2, months: { [activeMonth]: { monthlyFee: data.monthlyFee || "", members: data.members || [], guests: data.guests || [] } } };
+  } catch { /* começa vazio se o armazenamento local estiver inválido */ }
+  return { version: 2, months: {} };
+}
+
+async function loadFinance() {
+  const localFinance = getLocalFinance();
+  if (!currentUser || !supabaseClient) {
+    financeStore = localFinance;
+    renderFinance();
+    return;
+  }
+  const { data, error } = await supabaseClient
+    .from("society_data")
+    .select("data")
+    .eq("user_id", currentUser.id)
+    .maybeSingle();
+  if (error) {
+    console.error("Não foi possível carregar os dados do Supabase:", error.message);
+    financeStore = localFinance;
+  } else if (data?.data?.months) {
+    financeStore = data.data;
+  } else {
+    financeStore = localFinance;
+  }
+  renderFinance();
+  if (!data?.data?.months && !error) saveFinance();
+}
+
+document.querySelectorAll(".tab").forEach((tab) => tab.addEventListener("click", () => {
+  document.querySelectorAll(".tab,.panel").forEach((element) => element.classList.remove("active"));
+  tab.classList.add("active");
+  $(`#${tab.dataset.panel}`).classList.add("active");
+}));
+$("#players").addEventListener("input", () => { $("#playerCount").textContent = parsePlayers().length; });
+$("#drawButton").addEventListener("click", drawTeams);
+$("#redrawButton").addEventListener("click", () => { if (lastPlayers.length) renderTeams(makeTeams(lastPlayers, lastTeamCount)); });
+document.querySelectorAll("[data-add]").forEach((button) => button.addEventListener("click", () => addPerson(button.dataset.add)));
+$("#monthlyFee").addEventListener("input", updateFinance);
+$("#selectedMonth").addEventListener("change", (event) => setActiveMonth(event.target.value));
+$("#previousMonth").addEventListener("click", () => setActiveMonth(shiftMonth(activeMonth, -1)));
+$("#nextMonth").addEventListener("click", () => setActiveMonth(shiftMonth(activeMonth, 1)));
+
+function setAuthMessage(message = "", success = false) {
+  const element = $("#authMessage");
+  element.textContent = message;
+  element.classList.toggle("success", success);
+}
+
+function updateAuthForm() {
+  const isLogin = authMode === "login";
+  $("#authTitle").textContent = isLogin ? "Entre na sua conta" : "Crie sua conta";
+  $("#authDescription").textContent = isLogin
+    ? "Acesse seu controle de times e caixa em qualquer aparelho."
+    : "Crie uma conta para salvar o controle na nuvem.";
+  $("#authSubmit").textContent = isLogin ? "Entrar" : "Criar conta";
+  $("#authToggle").textContent = isLogin ? "Ainda não tenho conta" : "Já tenho uma conta";
+  $("#authPassword").autocomplete = isLogin ? "current-password" : "new-password";
+  setAuthMessage();
+}
+
+function showAuth() {
+  currentUser = null;
+  $("#appShell").hidden = true;
+  $("#authScreen").hidden = false;
+}
+
+async function startApplication(user) {
+  currentUser = user;
+  $("#userEmail").textContent = user.email || "Conta conectada";
+  $("#authScreen").hidden = true;
+  $("#appShell").hidden = false;
+  await loadFinance();
+}
+
+async function handleAuthSubmit(event) {
+  event.preventDefault();
+  if (!supabaseClient) return;
+  const email = $("#authEmail").value.trim();
+  const password = $("#authPassword").value;
+  const submit = $("#authSubmit");
+  submit.disabled = true;
+  setAuthMessage();
+  const result = authMode === "login"
+    ? await supabaseClient.auth.signInWithPassword({ email, password })
+    : await supabaseClient.auth.signUp({
+      email,
+      password,
+      options: { emailRedirectTo: window.location.href },
+    });
+  submit.disabled = false;
+  if (result.error) return setAuthMessage(result.error.message);
+  if (authMode === "signup" && !result.data.session) {
+    setAuthMessage("Conta criada. Confirme o e-mail enviado para entrar.", true);
+    return;
+  }
+  if (result.data.user) await startApplication(result.data.user);
+}
+
+async function initializeAuthentication() {
+  updateAuthForm();
+  if (!supabaseClient) {
+    $("#authSubmit").disabled = true;
+    $("#authToggle").disabled = true;
+    setAuthMessage("Configure a URL e a chave pública no arquivo supabase-config.js para ativar o login.");
+    return;
+  }
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (session?.user) await startApplication(session.user);
+  else showAuth();
+  supabaseClient.auth.onAuthStateChange((_event, session) => {
+    if (session?.user && session.user.id !== currentUser?.id) startApplication(session.user);
+    if (!session) showAuth();
+  });
+}
+
+$("#authForm").addEventListener("submit", handleAuthSubmit);
+$("#authToggle").addEventListener("click", () => { authMode = authMode === "login" ? "signup" : "login"; updateAuthForm(); });
+$("#logoutButton").addEventListener("click", async () => { if (supabaseClient) await supabaseClient.auth.signOut(); });
+initializeAuthentication();

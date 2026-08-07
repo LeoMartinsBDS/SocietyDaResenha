@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#116530" />
+    <title>Caixa | Society da resenha</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="hero">
+        <div>
+          <p class="eyebrow green">SOCIETY DA RESENHA</p>
+          <h1>Caixa <em>do mês.</em></h1>
+          <p class="hero-copy">Consulta pública, somente leitura — sem necessidade de login.</p>
+        </div>
+        <div class="header-tools">
+          <div class="ball-mark" aria-hidden="true">⚽</div>
+        </div>
+      </header>
+
+      <section id="publicFinance" class="panel active">
+        <div class="section-heading finance-heading">
+          <div>
+            <p class="eyebrow green">FINANCEIRO</p>
+            <h2 id="selectedMonthLabel">Caixa do mês</h2>
+          </div>
+          <div class="finance-controls">
+            <div class="month-picker" aria-label="Mês visualizado">
+              <button id="previousMonth" type="button" title="Mês anterior">‹</button>
+              <input id="selectedMonth" type="month" aria-label="Selecionar mês" />
+              <button id="nextMonth" type="button" title="Próximo mês">›</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="summary-grid">
+          <article class="summary-card"><span>Total do mês</span><strong id="monthTotal">R$ 0,00</strong><small>Mensalistas + avulsos</small></article>
+          <article class="summary-card cash-summary"><span>Mensalistas recebido</span><strong id="monthlyReceived">R$ 0,00</strong><small id="monthlyProgress">0 mensalistas cadastrados</small></article>
+          <article class="summary-card guest-summary"><span>Avulsos recebido</span><strong id="guestReceived">R$ 0,00</strong><small id="guestProgress">0 avulsos cadastrados</small></article>
+        </div>
+
+        <div class="finance-grid">
+          <article class="card people-card">
+            <div class="card-topline">
+              <div><p class="eyebrow green">FIXOS</p><h3>Mensalistas</h3></div>
+            </div>
+            <p class="field-help">Quem já pagou a mensalidade deste mês.</p>
+            <div id="members" class="people-list"></div>
+            <div id="membersEmpty" class="list-empty">Nenhum mensalista cadastrado.</div>
+          </article>
+          <article class="card people-card">
+            <div class="card-topline">
+              <div><p class="eyebrow green">CONVIDADOS</p><h3>Avulsos</h3></div>
+            </div>
+            <p class="field-help">Quem pagou como avulso neste mês.</p>
+            <div id="guests" class="people-list"></div>
+            <div id="guestsEmpty" class="list-empty">Nenhum avulso cadastrado.</div>
+          </article>
+        </div>
+      </section>
+
+      <p id="publicMessage" class="public-message" aria-live="polite" hidden></p>
+    </main>
+
+    <template id="personViewTemplate">
+      <div class="person-view-row">
+        <span class="person-view-name"></span>
+        <span class="person-view-payment"></span>
+      </div>
+    </template>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script src="public.js"></script>
+  </body>
+</html>

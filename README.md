@@ -23,6 +23,18 @@ Aplicação estática para sortear times e controlar mensalistas/avulsos por mê
 7. Volte em **Settings** > **Pages** e clique em **Visit site**. O endereço normalmente será `https://SEU-USUARIO.github.io/society/`.
 8. Copie esse endereço e adicione-o também nas **Redirect URLs** do Supabase (passo 6 anterior), caso ainda não tenha feito isso.
 
+## Caixa público (sem login)
+
+A página [caixa-publico.html](caixa-publico.html) exibe, sem exigir login, quem pagou, o valor total do mês, o valor dos mensalistas e o valor dos avulsos. É somente leitura: não é possível inserir ou alterar nada por ela.
+
+Para ativar:
+
+1. Abra **SQL Editor** > **New query** no Supabase.
+2. Copie todo o conteúdo de [supabase-schema-public.sql](supabase-schema-public.sql), cole no editor e clique em **Run**. Isso cria uma função que expõe só a leitura do caixa, sem alterar as regras de segurança da tabela principal (ela continua exigindo login para ler, inserir, alterar ou apagar).
+3. Publique o site normalmente. O link público fica em `https://SEU-USUARIO.github.io/society/caixa-publico.html` (também há um atalho "Ver caixa público" no topo da tela logada).
+
+Como o app foi pensado para uma conta única (o grupo), a função devolve os dados dessa conta para qualquer visitante do link público — não é necessário criar login para quem só quer consultar.
+
 ## Uso em mais de um aparelho
 
 Crie uma conta uma vez e entre com **o mesmo e-mail e senha** no computador e no celular. Os lançamentos serão sincronizados automaticamente. Cada conta tem uma base de dados independente.

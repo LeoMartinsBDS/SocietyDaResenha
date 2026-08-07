@@ -39,6 +39,7 @@
         </div>
 
         <div class="summary-grid">
+          <article class="summary-card fee-summary"><span>Valor da mensalidade</span><strong id="monthlyFeeValue">R$ 0,00</strong><small>Valor cobrado por mensalista</small></article>
           <article class="summary-card"><span>Total do mês</span><strong id="monthTotal">R$ 0,00</strong><small>Mensalistas + avulsos</small></article>
           <article class="summary-card cash-summary"><span>Mensalistas recebido</span><strong id="monthlyReceived">R$ 0,00</strong><small id="monthlyProgress">0 mensalistas cadastrados</small></article>
           <article class="summary-card guest-summary"><span>Avulsos recebido</span><strong id="guestReceived">R$ 0,00</strong><small id="guestProgress">0 avulsos cadastrados</small></article>
@@ -57,8 +58,8 @@
             <div class="card-topline">
               <div><p class="eyebrow green">CONVIDADOS</p><h3>Avulsos</h3></div>
             </div>
-            <p class="field-help">Quem pagou como avulso neste mês.</p>
-            <div id="guests" class="people-list"></div>
+            <p class="field-help">Avulsos pagam semana a semana — o histórico de cada semana fica registrado.</p>
+            <div id="guests" class="guest-weeks"></div>
             <div id="guestsEmpty" class="list-empty">Nenhum avulso cadastrado.</div>
           </article>
         </div>

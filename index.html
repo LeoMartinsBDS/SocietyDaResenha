@@ -106,7 +106,6 @@
         <div class="summary-grid">
           <article class="summary-card monthly-summary"><span>Mensalidades recebidas</span><strong id="monthlyReceived">R$ 0,00</strong><small id="monthlyProgress">0 mensalistas cadastrados</small></article>
           <article class="summary-card guest-summary"><span>Avulsos recebidos</span><strong id="guestReceived">R$ 0,00</strong><small id="guestProgress">0 avulsos cadastrados</small></article>
-          <article class="summary-card cash-summary"><span>Caixa • avulsos</span><strong id="cashTotal">R$ 0,00</strong><small>Saldo que ficou no caixa</small></article>
         </div>
 
         <div class="finance-grid">
@@ -122,11 +121,16 @@
           <article class="card people-card">
             <div class="card-topline">
               <div><p class="eyebrow green">CONVIDADOS</p><h3>Avulsos</h3></div>
-              <button class="add-button" data-add="guest" type="button">+ Adicionar</button>
+              <div class="card-actions">
+                <button class="add-button" data-add="guest" type="button">+ Adicionar</button>
+                <button id="newGuestWeek" class="week-button" type="button" title="Arquiva a semana atual e começa uma lista nova, sem apagar nada">Nova semana</button>
+              </div>
             </div>
-            <p class="field-help">Tudo que os avulsos pagarem compõe o caixa.</p>
+            <p class="field-help">Avulsos pagam semana a semana. Use "Nova semana" para começar do zero sem perder o que já foi registrado.</p>
+            <p id="currentWeekLabel" class="week-label">Semana atual</p>
             <div id="guests" class="people-list"></div>
-            <div id="guestsEmpty" class="list-empty">Nenhum avulso cadastrado.</div>
+            <div id="guestsEmpty" class="list-empty">Nenhum avulso cadastrado nesta semana.</div>
+            <div id="guestHistory" class="guest-history" hidden></div>
           </article>
         </div>
       </section>

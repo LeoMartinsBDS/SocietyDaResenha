@@ -8,16 +8,17 @@
 -- DEFINER), então ela consegue ler a linha e devolver só o campo "data" —
 -- sem expor o user_id nem permitir qualquer escrita.
 --
--- Como o app é de uso pessoal/grupo único, a função devolve a primeira linha
--- encontrada. Se um dia existir mais de uma conta usando este banco, ajuste
--- o "limit 1" para filtrar a conta certa.
+-- Como o app é de uso pessoal/grupo único, a função devolve a linha
+-- atualizada mais recentemente (a conta realmente em uso). Se existir mais
+-- de uma conta cadastrada (por exemplo, contas de teste), isso evita pegar
+-- uma linha antiga/vazia por engano.
 create or replace function public.get_public_cash_flow()
 returns jsonb
 language sql
 security definer
 set search_path = public
 as $$
-  select data from public.society_data limit 1;
+  select data from public.society_data order by updated_at desc limit 1;
 $$;
 
 revoke all on function public.get_public_cash_flow() from public;

@@ -25,10 +25,25 @@ function shiftMonth(key, amount) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
 }
 
+function formatDate(iso) {
+  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit" }).format(new Date(iso));
+}
+
 let activeMonth = currentMonthKey();
 let financeStore = { version: 2, months: {} };
 
-function emptyMonth() { return { monthlyFee: "", members: [], guests: [] }; }
+function emptyMonth() { return { monthlyFee: "", members: [], guestWeeks: [] }; }
+
+// Meses antigos guardavam os avulsos direto em "guests"; agora ficam
+// organizados por semana em "guestWeeks". Isso adapta os dois formatos.
+function normalizeMonth(month) {
+  if (!month) return emptyMonth();
+  if (Array.isArray(month.guestWeeks)) {
+    return { monthlyFee: month.monthlyFee || "", members: month.members || [], guestWeeks: month.guestWeeks };
+  }
+  const legacyGuests = Array.isArray(month.guests) ? month.guests : [];
+  return { monthlyFee: month.monthlyFee || "", members: month.members || [], guestWeeks: legacyGuests.length ? [{ startedAt: new Date().toISOString(), guests: legacyGuests }] : [] };
+}
 
 function showMessage(message) {
   const element = $("#publicMessage");
@@ -36,9 +51,9 @@ function showMessage(message) {
   element.hidden = !message;
 }
 
-function renderPeople(type, people) {
-  const container = $(type === "member" ? "#members" : "#guests");
-  const emptyState = $(type === "member" ? "#membersEmpty" : "#guestsEmpty");
+function renderPeople(people) {
+  const container = $("#members");
+  const emptyState = $("#membersEmpty");
   container.innerHTML = "";
   people.forEach((person) => {
     const row = $("#personViewTemplate").content.firstElementChild.cloneNode(true);
@@ -56,21 +71,59 @@ function renderPeople(type, people) {
   emptyState.style.display = people.length ? "none" : "block";
 }
 
+function renderGuestWeeks(guestWeeks) {
+  const container = $("#guests");
+  const emptyState = $("#guestsEmpty");
+  container.innerHTML = "";
+  const weeksWithGuests = guestWeeks.filter((week) => week.guests.length);
+  emptyState.style.display = weeksWithGuests.length ? "none" : "block";
+  [...weeksWithGuests].reverse().forEach((week) => {
+    const group = document.createElement("div");
+    group.className = "guest-week-group";
+    const heading = document.createElement("div");
+    heading.className = "week-heading";
+    const label = document.createElement("span");
+    label.textContent = `Semana de ${formatDate(week.startedAt)}`;
+    const total = document.createElement("strong");
+    total.textContent = money(week.guests.reduce((sum, person) => sum + person.payment, 0));
+    heading.append(label, total);
+    const list = document.createElement("div");
+    list.className = "people-list";
+    week.guests.forEach((person) => {
+      const row = $("#personViewTemplate").content.firstElementChild.cloneNode(true);
+      row.querySelector(".person-view-name").textContent = person.name || "(sem nome)";
+      const paymentEl = row.querySelector(".person-view-payment");
+      if (person.payment > 0) {
+        paymentEl.textContent = money(person.payment);
+        paymentEl.classList.add("paid-pill");
+      } else {
+        paymentEl.textContent = "Sem pagamento";
+        paymentEl.classList.add("pending-pill");
+      }
+      list.append(row);
+    });
+    group.append(heading, list);
+    container.append(group);
+  });
+}
+
 function renderFinance() {
-  const month = financeStore.months[activeMonth] || emptyMonth();
+  const month = normalizeMonth(financeStore.months[activeMonth]);
   $("#selectedMonth").value = activeMonth;
   $("#selectedMonthLabel").textContent = `Caixa de ${monthName(activeMonth)}`;
 
   const totalMembers = month.members.reduce((sum, person) => sum + person.payment, 0);
-  const totalGuests = month.guests.reduce((sum, person) => sum + person.payment, 0);
+  const allGuests = month.guestWeeks.flatMap((week) => week.guests);
+  const totalGuests = allGuests.reduce((sum, person) => sum + person.payment, 0);
+  $("#monthlyFeeValue").textContent = money(month.monthlyFee);
   $("#monthTotal").textContent = money(totalMembers + totalGuests);
   $("#monthlyReceived").textContent = money(totalMembers);
   $("#guestReceived").textContent = money(totalGuests);
   $("#monthlyProgress").textContent = `${month.members.length} mensalista${month.members.length === 1 ? "" : "s"} cadastrado${month.members.length === 1 ? "" : "s"}`;
-  $("#guestProgress").textContent = `${month.guests.length} avulso${month.guests.length === 1 ? "" : "s"} cadastrado${month.guests.length === 1 ? "" : "s"}`;
+  $("#guestProgress").textContent = `${allGuests.length} avulso${allGuests.length === 1 ? "" : "s"} em ${month.guestWeeks.length} semana${month.guestWeeks.length === 1 ? "" : "s"}`;
 
-  renderPeople("member", month.members);
-  renderPeople("guest", month.guests);
+  renderPeople(month.members);
+  renderGuestWeeks(month.guestWeeks);
 }
 
 function setActiveMonth(key) {

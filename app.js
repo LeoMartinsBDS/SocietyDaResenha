@@ -108,10 +108,35 @@ function shiftMonth(key, amount) {
 let activeMonth = currentMonthKey();
 let financeStore = { version: 2, months: {} };
 
-function emptyMonth() { return { monthlyFee: "", members: [], guests: [] }; }
+// Avulsos pagam semana a semana. Cada mês guarda uma lista de "semanas" de
+// avulsos; a última é a semana em edição, as anteriores ficam como histórico
+// somente leitura — nada é apagado ao começar uma semana nova.
+function emptyGuestWeek() { return { startedAt: new Date().toISOString(), guests: [] }; }
+function emptyMonth() { return { monthlyFee: "", members: [], guestWeeks: [emptyGuestWeek()] }; }
+function currentGuestWeek(month) { return month.guestWeeks[month.guestWeeks.length - 1]; }
+
+// Converte meses salvos no formato antigo (guests: []) para o novo formato
+// (guestWeeks: [...]), sem perder os dados já registrados.
+function normalizeMonth(month) {
+  if (!month) return emptyMonth();
+  if (Array.isArray(month.guestWeeks) && month.guestWeeks.length) {
+    return { monthlyFee: month.monthlyFee || "", members: month.members || [], guestWeeks: month.guestWeeks };
+  }
+  const legacyGuests = Array.isArray(month.guests) ? month.guests : [];
+  return { monthlyFee: month.monthlyFee || "", members: month.members || [], guestWeeks: [{ startedAt: new Date().toISOString(), guests: legacyGuests }] };
+}
+
+function normalizeStore(store) {
+  const months = {};
+  Object.entries(store?.months || {}).forEach(([key, month]) => { months[key] = normalizeMonth(month); });
+  return { version: 2, months };
+}
 
 function ensureMonth(key) {
-  if (financeStore.months[key]) return financeStore.months[key];
+  if (financeStore.months[key]) {
+    financeStore.months[key] = normalizeMonth(financeStore.months[key]);
+    return financeStore.months[key];
+  }
   const earlierMonths = Object.keys(financeStore.months).filter((month) => month < key).sort();
   const previous = financeStore.months[earlierMonths.at(-1)];
   financeStore.months[key] = {
@@ -127,6 +152,10 @@ function getRows(type) {
     name: row.querySelector(".person-name").value.trim(),
     payment: readNumber(row.querySelector(".person-payment").value),
   }));
+}
+
+function formatDate(iso) {
+  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit" }).format(new Date(iso));
 }
 
 function saveFinance() {
@@ -149,21 +178,21 @@ async function saveFinanceToCloud() {
 
 function updateSummary(month) {
   const totalMembers = month.members.reduce((sum, person) => sum + person.payment, 0);
-  const totalGuests = month.guests.reduce((sum, person) => sum + person.payment, 0);
+  const allGuests = month.guestWeeks.flatMap((week) => week.guests);
+  const totalGuests = allGuests.reduce((sum, person) => sum + person.payment, 0);
   $("#monthlyReceived").textContent = money(totalMembers);
   $("#guestReceived").textContent = money(totalGuests);
-  $("#cashTotal").textContent = money(totalGuests);
   $("#monthlyProgress").textContent = `${month.members.length} mensalista${month.members.length === 1 ? "" : "s"} cadastrado${month.members.length === 1 ? "" : "s"}`;
-  $("#guestProgress").textContent = `${month.guests.length} avulso${month.guests.length === 1 ? "" : "s"} cadastrado${month.guests.length === 1 ? "" : "s"}`;
+  $("#guestProgress").textContent = `${allGuests.length} avulso${allGuests.length === 1 ? "" : "s"} em ${month.guestWeeks.length} semana${month.guestWeeks.length === 1 ? "" : "s"}`;
   $("#membersEmpty").style.display = month.members.length ? "none" : "block";
-  $("#guestsEmpty").style.display = month.guests.length ? "none" : "block";
+  $("#guestsEmpty").style.display = currentGuestWeek(month).guests.length ? "none" : "block";
 }
 
 function updateFinance() {
   const month = ensureMonth(activeMonth);
   month.monthlyFee = $("#monthlyFee").value;
   month.members = getRows("member");
-  month.guests = getRows("guest");
+  currentGuestWeek(month).guests = getRows("guest");
   updateSummary(month);
   saveFinance();
 }
@@ -178,6 +207,54 @@ function addPerson(type, values = {}, shouldUpdate = true) {
   if (shouldUpdate) updateFinance();
 }
 
+function renderGuestHistory(month) {
+  const container = $("#guestHistory");
+  container.innerHTML = "";
+  const pastWeeks = month.guestWeeks.slice(0, -1);
+  container.hidden = !pastWeeks.length;
+  [...pastWeeks].reverse().forEach((week) => {
+    const total = week.guests.reduce((sum, person) => sum + person.payment, 0);
+    const group = document.createElement("div");
+    group.className = "guest-week-group";
+    const heading = document.createElement("div");
+    heading.className = "week-heading";
+    const label = document.createElement("span");
+    label.textContent = `Semana de ${formatDate(week.startedAt)}`;
+    const total_ = document.createElement("strong");
+    total_.textContent = money(total);
+    heading.append(label, total_);
+    const list = document.createElement("div");
+    list.className = "people-list";
+    if (!week.guests.length) {
+      const empty = document.createElement("p");
+      empty.className = "list-empty";
+      empty.textContent = "Nenhum avulso registrado nesta semana.";
+      list.append(empty);
+    }
+    week.guests.forEach((person) => {
+      const row = document.createElement("div");
+      row.className = "person-view-row";
+      const name = document.createElement("span");
+      name.className = "person-view-name";
+      name.textContent = person.name || "(sem nome)";
+      const payment = document.createElement("span");
+      if (person.payment > 0) { payment.textContent = money(person.payment); payment.className = "paid-pill"; }
+      else { payment.textContent = "Sem pagamento"; payment.className = "pending-pill"; }
+      row.append(name, payment);
+      list.append(row);
+    });
+    group.append(heading, list);
+    container.append(group);
+  });
+}
+
+function startNewGuestWeek() {
+  const month = ensureMonth(activeMonth);
+  month.guestWeeks.push(emptyGuestWeek());
+  renderFinance();
+  saveFinance();
+}
+
 function renderFinance() {
   const month = ensureMonth(activeMonth);
   $("#selectedMonth").value = activeMonth;
@@ -186,7 +263,9 @@ function renderFinance() {
   $("#members").innerHTML = "";
   $("#guests").innerHTML = "";
   month.members.forEach((person) => addPerson("member", person, false));
-  month.guests.forEach((person) => addPerson("guest", person, false));
+  currentGuestWeek(month).guests.forEach((person) => addPerson("guest", person, false));
+  $("#currentWeekLabel").textContent = `Semana atual · desde ${formatDate(currentGuestWeek(month).startedAt)}`;
+  renderGuestHistory(month);
   updateSummary(month);
 }
 
@@ -210,8 +289,8 @@ function loadFinanceLegacy() {
 function getLocalFinance() {
   try {
     const data = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    if (data?.months) return data;
-    if (data) return { version: 2, months: { [activeMonth]: { monthlyFee: data.monthlyFee || "", members: data.members || [], guests: data.guests || [] } } };
+    if (data?.months) return normalizeStore(data);
+    if (data) return normalizeStore({ months: { [activeMonth]: { monthlyFee: data.monthlyFee || "", members: data.members || [], guests: data.guests || [] } } });
   } catch { /* começa vazio se o armazenamento local estiver inválido */ }
   return { version: 2, months: {} };
 }
@@ -232,7 +311,7 @@ async function loadFinance() {
     console.error("Não foi possível carregar os dados do Supabase:", error.message);
     financeStore = localFinance;
   } else if (data?.data?.months) {
-    financeStore = data.data;
+    financeStore = normalizeStore(data.data);
   } else {
     financeStore = localFinance;
   }
@@ -249,6 +328,7 @@ $("#players").addEventListener("input", () => { $("#playerCount").textContent = 
 $("#drawButton").addEventListener("click", drawTeams);
 $("#redrawButton").addEventListener("click", () => { if (lastPlayers.length) renderTeams(makeTeams(lastPlayers, lastTeamCount)); });
 document.querySelectorAll("[data-add]").forEach((button) => button.addEventListener("click", () => addPerson(button.dataset.add)));
+$("#newGuestWeek").addEventListener("click", startNewGuestWeek);
 $("#monthlyFee").addEventListener("input", updateFinance);
 $("#selectedMonth").addEventListener("change", (event) => setActiveMonth(event.target.value));
 $("#previousMonth").addEventListener("click", () => setActiveMonth(shiftMonth(activeMonth, -1)));

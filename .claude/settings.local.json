@@ -1,7 +1,26 @@
 {
   "permissions": {
     "allow": [
-      "Bash(mkdir -p \"/c/Users/Leonardo/Documents/ChatGPT/Society/SocietyDaResenha/.claude\")"
+      "Bash(mkdir -p \"/c/Users/Leonardo/Documents/ChatGPT/Society/SocietyDaResenha/.claude\")",
+      "PowerShell(gh auth status)",
+      "PowerShell(gh --version)",
+      "Bash(git -C \"C:\\\\Users\\\\Leonardo\\\\Documents\\\\ChatGPT\\\\Society\\\\SocietyDaResenha\" ls-files)",
+      "Bash(node -e \"const fs=require\\('fs'\\); const a=fs.readFileSync\\('app.js','utf8'\\); const h=fs.readFileSync\\('home.js','utf8'\\); const la=a.split\\('\\\\n'\\).find\\(l=>l.includes\\('const normalize'\\)\\); const lh=h.split\\('\\\\n'\\).find\\(l=>l.includes\\('const normalize'\\)\\); console.log\\('app:', JSON.stringify\\(la\\)\\); console.log\\('home:', JSON.stringify\\(lh\\)\\);\")",
+      "Bash(node -e ' *)",
+      "Bash(node --check home.js)",
+      "Bash(node \"C:\\\\Users\\\\Leonardo\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\C--Users-Leonardo-Documents-ChatGPT-Society-SocietyDaResenha\\\\c5b30a06-675c-4506-b9d6-ded3d4dec8f5\\\\scratchpad\\\\check.js\" \"C:\\\\Users\\\\Leonardo\\\\Documents\\\\ChatGPT\\\\Society\\\\SocietyDaResenha\\\\home.js\")",
+      "Bash(node --check app.js)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(gh pr *)",
+      "Bash(gh auth *)",
+      "PowerShell(gh auth status 2>&1)",
+      "PowerShell(Get-Command gh -ErrorAction SilentlyContinue; where.exe gh 2>&1; Test-Path \"C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe\"; Test-Path \"$env:LOCALAPPDATA\\\\Programs\\\\GitHub CLI\\\\gh.exe\")",
+      "PowerShell($vars = @\\('GH_TOKEN','GITHUB_TOKEN','GH_ENTERPRISE_TOKEN'\\); foreach \\($v in $vars\\) { if \\(Test-Path \"env:$v\"\\) { Write-Output \"$v is set\" } else { Write-Output \"$v not set\" } })",
+      "PowerShell(git config --get-all credential.helper)",
+      "PowerShell($env:GCM_INTERACTIVE)",
+      "PowerShell($env:GIT_TERMINAL_PROMPT)"
     ]
   }
 }

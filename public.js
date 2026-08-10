@@ -32,17 +32,18 @@ function formatDate(iso) {
 let activeMonth = currentMonthKey();
 let financeStore = { version: 2, months: {} };
 
-function emptyMonth() { return { monthlyFee: "", members: [], guestWeeks: [] }; }
+function emptyMonth() { return { monthlyFee: "", members: [], guestWeeks: [], guestWithdrawals: [] }; }
 
 // Meses antigos guardavam os avulsos direto em "guests"; agora ficam
 // organizados por semana em "guestWeeks". Isso adapta os dois formatos.
 function normalizeMonth(month) {
   if (!month) return emptyMonth();
+  const guestWithdrawals = Array.isArray(month.guestWithdrawals) ? month.guestWithdrawals : [];
   if (Array.isArray(month.guestWeeks)) {
-    return { monthlyFee: month.monthlyFee || "", members: month.members || [], guestWeeks: month.guestWeeks };
+    return { monthlyFee: month.monthlyFee || "", members: month.members || [], guestWeeks: month.guestWeeks, guestWithdrawals };
   }
   const legacyGuests = Array.isArray(month.guests) ? month.guests : [];
-  return { monthlyFee: month.monthlyFee || "", members: month.members || [], guestWeeks: legacyGuests.length ? [{ startedAt: new Date().toISOString(), guests: legacyGuests }] : [] };
+  return { monthlyFee: month.monthlyFee || "", members: month.members || [], guestWeeks: legacyGuests.length ? [{ startedAt: new Date().toISOString(), guests: legacyGuests }] : [], guestWithdrawals };
 }
 
 function showMessage(message) {
@@ -107,6 +108,21 @@ function renderGuestWeeks(guestWeeks) {
   });
 }
 
+function renderWithdrawals(withdrawals) {
+  const container = $("#withdrawals");
+  const emptyState = $("#withdrawalsEmpty");
+  container.innerHTML = "";
+  withdrawals.forEach((item) => {
+    const row = $("#personViewTemplate").content.firstElementChild.cloneNode(true);
+    row.querySelector(".person-view-name").textContent = item.name || "(sem motivo)";
+    const paymentEl = row.querySelector(".person-view-payment");
+    paymentEl.textContent = money(item.payment);
+    paymentEl.classList.add("withdrawal-pill");
+    container.append(row);
+  });
+  emptyState.style.display = withdrawals.length ? "none" : "block";
+}
+
 function renderFinance() {
   const month = normalizeMonth(financeStore.months[activeMonth]);
   $("#selectedMonth").value = activeMonth;
@@ -115,15 +131,19 @@ function renderFinance() {
   const totalMembers = month.members.reduce((sum, person) => sum + person.payment, 0);
   const allGuests = month.guestWeeks.flatMap((week) => week.guests);
   const totalGuests = allGuests.reduce((sum, person) => sum + person.payment, 0);
+  const totalWithdrawn = month.guestWithdrawals.reduce((sum, item) => sum + item.payment, 0);
   $("#monthlyFeeValue").textContent = money(month.monthlyFee);
   $("#monthTotal").textContent = money(totalMembers + totalGuests);
   $("#monthlyReceived").textContent = money(totalMembers);
   $("#guestReceived").textContent = money(totalGuests);
   $("#monthlyProgress").textContent = `${month.members.length} mensalista${month.members.length === 1 ? "" : "s"} cadastrado${month.members.length === 1 ? "" : "s"}`;
   $("#guestProgress").textContent = `${allGuests.length} avulso${allGuests.length === 1 ? "" : "s"} em ${month.guestWeeks.length} semana${month.guestWeeks.length === 1 ? "" : "s"}`;
+  $("#guestWithdrawn").textContent = money(totalWithdrawn);
+  $("#guestBalance").textContent = `Saldo: ${money(totalGuests - totalWithdrawn)}`;
 
   renderPeople(month.members);
   renderGuestWeeks(month.guestWeeks);
+  renderWithdrawals(month.guestWithdrawals);
 }
 
 function setActiveMonth(key) {

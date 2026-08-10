@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#116530" />
+    <title>Painel | Society da resenha</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <section id="authScreen" class="auth-screen">
+      <form id="authForm" class="auth-card">
+        <div class="auth-ball" aria-hidden="true">⚽</div>
+        <p class="eyebrow green">SOCIETY DA RESENHA</p>
+        <h1 id="authTitle">Entre na sua conta</h1>
+        <p id="authDescription">Acesse seu controle de times e caixa em qualquer aparelho.</p>
+        <label for="authEmail">E-mail</label>
+        <input id="authEmail" type="email" autocomplete="email" required placeholder="voce@email.com" />
+        <label for="authPassword">Senha</label>
+        <input id="authPassword" type="password" autocomplete="current-password" required minlength="6" placeholder="No mínimo 6 caracteres" />
+        <p id="authMessage" class="auth-message" aria-live="polite"></p>
+        <button id="authSubmit" class="primary-button auth-submit" type="submit">Entrar</button>
+        <button id="authToggle" class="text-button" type="button">Ainda não tenho conta</button>
+        <a class="text-button" href="index.html">‹ Voltar para o início</a>
+      </form>
+    </section>
+
+    <main id="appShell" class="app-shell" hidden>
+      <header class="hero">
+        <div>
+          <p class="eyebrow"><span></span> ORGANIZE A PELADA</p>
+          <h1>Society <em>da resenha.</em></h1>
+          <p class="hero-copy">Sorteie os times e mantenha o caixa do jogo em ordem.</p>
+        </div>
+        <div class="header-tools">
+          <a class="public-link" href="index.html">‹ Início</a>
+          <a class="public-link" href="caixa-publico.html" target="_blank" rel="noopener">Ver caixa público ↗</a>
+          <div class="account"><span id="userEmail"></span><button id="logoutButton" type="button">Sair</button></div>
+          <div class="ball-mark" aria-hidden="true">⚽</div>
+        </div>
+      </header>
+
+      <nav class="tabs" aria-label="Navegação principal">
+        <button class="tab active" data-panel="draw" type="button">Sorteador de times</button>
+        <button class="tab" data-panel="finance" type="button">Mensalistas &amp; avulsos</button>
+      </nav>
+
+      <section id="draw" class="panel active">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow green">ESCALAÇÃO</p>
+            <h2>Monte os times</h2>
+          </div>
+          <div class="player-counter"><strong id="playerCount">0</strong> jogadores</div>
+        </div>
+        <div class="draw-grid">
+          <article class="card input-card">
+            <label for="players">Lista de jogadores</label>
+            <p class="field-help">Um por linha. Você pode usar “1 - Nome” ou apenas o nome.</p>
+            <textarea id="players" rows="14" placeholder="1 - Leonardo&#10;2 - Matheus Dantas&#10;3 - Weslei"></textarea>
+            <div class="settings-row">
+              <label class="select-label" for="teamCount">Quantidade de times
+                <select id="teamCount">
+                  <option value="2">2 times</option>
+                  <option value="3">3 times</option>
+                  <option value="4">4 times</option>
+                  <option value="5">5 times</option>
+                </select>
+              </label>
+              <button id="drawButton" class="primary-button" type="button">Sortear times <span>→</span></button>
+            </div>
+          </article>
+          <article class="card results-card">
+            <div class="results-title">
+              <div>
+                <p class="eyebrow green">RESULTADO</p>
+                <h3>Times sorteados</h3>
+              </div>
+              <div class="results-actions">
+                <button id="copyTeamsButton" class="icon-button" type="button" title="Copiar times" disabled>📋</button>
+                <button id="redrawButton" class="icon-button" type="button" title="Sortear novamente" disabled>↻</button>
+              </div>
+            </div>
+            <div id="drawMessage" class="empty-state">Adicione os jogadores e faça o sorteio.</div>
+            <div id="teams" class="teams" aria-live="polite"></div>
+          </article>
+        </div>
+      </section>
+
+      <section id="finance" class="panel">
+        <div class="section-heading finance-heading">
+          <div>
+            <p class="eyebrow green">FINANCEIRO</p>
+            <h2 id="selectedMonthLabel">Controle do caixa</h2>
+          </div>
+          <div class="finance-controls">
+            <div class="month-picker" aria-label="Mês visualizado">
+              <button id="previousMonth" type="button" title="Mês anterior">‹</button>
+              <input id="selectedMonth" type="month" aria-label="Selecionar mês" />
+              <button id="nextMonth" type="button" title="Próximo mês">›</button>
+            </div>
+            <label class="monthly-value" for="monthlyFee">Valor do mensal
+              <div class="money-input"><span>R$</span><input id="monthlyFee" type="number" min="0" step="0.01" placeholder="0,00" /></div>
+            </label>
+          </div>
+        </div>
+
+        <div class="summary-grid">
+          <article class="summary-card monthly-summary"><span>Mensalidades recebidas</span><strong id="monthlyReceived">R$ 0,00</strong><small id="monthlyProgress">0 mensalistas cadastrados</small></article>
+          <article class="summary-card guest-summary"><span>Avulsos recebidos</span><strong id="guestReceived">R$ 0,00</strong><small id="guestProgress">0 avulsos cadastrados</small></article>
+          <article class="summary-card withdrawal-summary"><span>Retirado dos avulsos</span><strong id="guestWithdrawn">R$ 0,00</strong><small id="guestBalance">Saldo: R$ 0,00</small></article>
+        </div>
+
+        <div class="finance-grid">
+          <article class="card people-card">
+            <div class="card-topline">
+              <div><p class="eyebrow green">FIXOS</p><h3>Mensalistas</h3></div>
+              <button class="add-button" data-add="member" type="button">+ Adicionar</button>
+            </div>
+            <p class="field-help">Registre o valor que cada mensalista já pagou.</p>
+            <div id="members" class="people-list"></div>
+            <div id="membersEmpty" class="list-empty">Nenhum mensalista cadastrado.</div>
+          </article>
+          <article class="card people-card">
+            <div class="card-topline">
+              <div><p class="eyebrow green">CONVIDADOS</p><h3>Avulsos</h3></div>
+              <div class="card-actions">
+                <button class="add-button" data-add="guest" type="button">+ Adicionar</button>
+                <button id="newGuestWeek" class="week-button" type="button" title="Arquiva a semana atual e começa uma lista nova, sem apagar nada">Nova semana</button>
+              </div>
+            </div>
+            <p class="field-help">Avulsos pagam semana a semana. Use "Nova semana" para começar do zero sem perder o que já foi registrado.</p>
+            <p id="currentWeekLabel" class="week-label">Semana atual</p>
+            <div id="guests" class="people-list"></div>
+            <div id="guestsEmpty" class="list-empty">Nenhum avulso cadastrado nesta semana.</div>
+            <div id="guestHistory" class="guest-history" hidden></div>
+
+            <div class="card-topline withdrawals-topline">
+              <div><p class="eyebrow green">SAÍDAS</p><h3>Retiradas</h3></div>
+              <button class="add-button" data-add="withdrawal" type="button">+ Retirada</button>
+            </div>
+            <p class="field-help">Registre saques feitos do caixa dos avulsos (ex: compra de material, troco, etc).</p>
+            <div id="withdrawals" class="people-list"></div>
+            <div id="withdrawalsEmpty" class="list-empty">Nenhuma retirada registrada.</div>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <template id="personTemplate">
+      <div class="person-row">
+        <input class="person-name" type="text" placeholder="Nome" aria-label="Nome" />
+        <div class="row-money"><span>R$</span><input class="person-payment" type="number" min="0" step="0.01" placeholder="0,00" aria-label="Valor pago" /></div>
+        <button class="delete-button" type="button" title="Remover">×</button>
+      </div>
+    </template>
+    <template id="withdrawalTemplate">
+      <div class="person-row">
+        <input class="person-name" type="text" placeholder="Motivo da retirada" aria-label="Motivo" />
+        <div class="row-money"><span>R$</span><input class="person-payment" type="number" min="0" step="0.01" placeholder="0,00" aria-label="Valor retirado" /></div>
+        <button class="delete-button" type="button" title="Remover">×</button>
+      </div>
+    </template>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

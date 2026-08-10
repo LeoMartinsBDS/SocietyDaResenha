@@ -11,6 +11,7 @@ const supabaseClient = isSupabaseConfigured && window.supabase
 
 let lastPlayers = [];
 let lastTeamCount = 0;
+let lastTeams = [];
 let currentUser = null;
 let saveTimer = null;
 let authMode = "login";
@@ -56,6 +57,7 @@ function makeTeams(players, teamCount) {
 }
 
 function renderTeams(teams) {
+  lastTeams = teams;
   const container = $("#teams");
   container.innerHTML = "";
   $("#drawMessage").style.display = "none";
@@ -69,6 +71,35 @@ function renderTeams(teams) {
 
 function escapeHtml(value) { return value.replace(/[&<>'"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[char]); }
 
+function buildTeamsText(teams) {
+  return teams.map((team, index) => `Time ${index + 1} (${team.length} jogador${team.length === 1 ? "" : "es"})\n${team.map((name) => `- ${name}`).join("\n")}`).join("\n\n");
+}
+
+async function copyTeams() {
+  if (!lastTeams.length) return;
+  const text = buildTeamsText(lastTeams);
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+    } else {
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.append(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      textarea.remove();
+    }
+    const button = $("#copyTeamsButton");
+    const original = button.textContent;
+    button.textContent = "✔";
+    window.setTimeout(() => { button.textContent = original; }, 1200);
+  } catch (error) {
+    console.error("Não foi possível copiar os times:", error);
+  }
+}
+
 function drawTeams() {
   const players = parsePlayers();
   const teamCount = Number($("#teamCount").value);
@@ -80,6 +111,7 @@ function drawTeams() {
   lastTeamCount = teamCount;
   renderTeams(makeTeams(players, teamCount));
   $("#redrawButton").disabled = false;
+  $("#copyTeamsButton").disabled = false;
 }
 
 function showDrawMessage(message) {
@@ -112,18 +144,19 @@ let financeStore = { version: 2, months: {} };
 // avulsos; a última é a semana em edição, as anteriores ficam como histórico
 // somente leitura — nada é apagado ao começar uma semana nova.
 function emptyGuestWeek() { return { startedAt: new Date().toISOString(), guests: [] }; }
-function emptyMonth() { return { monthlyFee: "", members: [], guestWeeks: [emptyGuestWeek()] }; }
+function emptyMonth() { return { monthlyFee: "", members: [], guestWeeks: [emptyGuestWeek()], guestWithdrawals: [] }; }
 function currentGuestWeek(month) { return month.guestWeeks[month.guestWeeks.length - 1]; }
 
 // Converte meses salvos no formato antigo (guests: []) para o novo formato
 // (guestWeeks: [...]), sem perder os dados já registrados.
 function normalizeMonth(month) {
   if (!month) return emptyMonth();
+  const guestWithdrawals = Array.isArray(month.guestWithdrawals) ? month.guestWithdrawals : [];
   if (Array.isArray(month.guestWeeks) && month.guestWeeks.length) {
-    return { monthlyFee: month.monthlyFee || "", members: month.members || [], guestWeeks: month.guestWeeks };
+    return { monthlyFee: month.monthlyFee || "", members: month.members || [], guestWeeks: month.guestWeeks, guestWithdrawals };
   }
   const legacyGuests = Array.isArray(month.guests) ? month.guests : [];
-  return { monthlyFee: month.monthlyFee || "", members: month.members || [], guestWeeks: [{ startedAt: new Date().toISOString(), guests: legacyGuests }] };
+  return { monthlyFee: month.monthlyFee || "", members: month.members || [], guestWeeks: [{ startedAt: new Date().toISOString(), guests: legacyGuests }], guestWithdrawals };
 }
 
 function normalizeStore(store) {
@@ -147,8 +180,9 @@ function ensureMonth(key) {
   return financeStore.months[key];
 }
 
+const rowContainers = { member: "members", guest: "guests", withdrawal: "withdrawals" };
 function getRows(type) {
-  return [...document.querySelectorAll(`#${type === "member" ? "members" : "guests"} .person-row`)].map((row) => ({
+  return [...document.querySelectorAll(`#${rowContainers[type]} .person-row`)].map((row) => ({
     name: row.querySelector(".person-name").value.trim(),
     payment: readNumber(row.querySelector(".person-payment").value),
   }));
@@ -180,12 +214,16 @@ function updateSummary(month) {
   const totalMembers = month.members.reduce((sum, person) => sum + person.payment, 0);
   const allGuests = month.guestWeeks.flatMap((week) => week.guests);
   const totalGuests = allGuests.reduce((sum, person) => sum + person.payment, 0);
+  const totalWithdrawn = month.guestWithdrawals.reduce((sum, item) => sum + item.payment, 0);
   $("#monthlyReceived").textContent = money(totalMembers);
   $("#guestReceived").textContent = money(totalGuests);
+  $("#guestWithdrawn").textContent = money(totalWithdrawn);
+  $("#guestBalance").textContent = `Saldo: ${money(totalGuests - totalWithdrawn)}`;
   $("#monthlyProgress").textContent = `${month.members.length} mensalista${month.members.length === 1 ? "" : "s"} cadastrado${month.members.length === 1 ? "" : "s"}`;
   $("#guestProgress").textContent = `${allGuests.length} avulso${allGuests.length === 1 ? "" : "s"} em ${month.guestWeeks.length} semana${month.guestWeeks.length === 1 ? "" : "s"}`;
   $("#membersEmpty").style.display = month.members.length ? "none" : "block";
   $("#guestsEmpty").style.display = currentGuestWeek(month).guests.length ? "none" : "block";
+  $("#withdrawalsEmpty").style.display = month.guestWithdrawals.length ? "none" : "block";
 }
 
 function updateFinance() {
@@ -193,17 +231,19 @@ function updateFinance() {
   month.monthlyFee = $("#monthlyFee").value;
   month.members = getRows("member");
   currentGuestWeek(month).guests = getRows("guest");
+  month.guestWithdrawals = getRows("withdrawal");
   updateSummary(month);
   saveFinance();
 }
 
 function addPerson(type, values = {}, shouldUpdate = true) {
-  const row = $("#personTemplate").content.firstElementChild.cloneNode(true);
+  const templateId = type === "withdrawal" ? "#withdrawalTemplate" : "#personTemplate";
+  const row = $(templateId).content.firstElementChild.cloneNode(true);
   row.querySelector(".person-name").value = values.name || "";
   row.querySelector(".person-payment").value = values.payment || "";
   row.addEventListener("input", updateFinance);
   row.querySelector(".delete-button").addEventListener("click", () => { row.remove(); updateFinance(); });
-  $(type === "member" ? "#members" : "#guests").append(row);
+  $(`#${rowContainers[type]}`).append(row);
   if (shouldUpdate) updateFinance();
 }
 
@@ -262,8 +302,10 @@ function renderFinance() {
   $("#monthlyFee").value = month.monthlyFee || "";
   $("#members").innerHTML = "";
   $("#guests").innerHTML = "";
+  $("#withdrawals").innerHTML = "";
   month.members.forEach((person) => addPerson("member", person, false));
   currentGuestWeek(month).guests.forEach((person) => addPerson("guest", person, false));
+  month.guestWithdrawals.forEach((item) => addPerson("withdrawal", item, false));
   $("#currentWeekLabel").textContent = `Semana atual · desde ${formatDate(currentGuestWeek(month).startedAt)}`;
   renderGuestHistory(month);
   updateSummary(month);
@@ -327,6 +369,7 @@ document.querySelectorAll(".tab").forEach((tab) => tab.addEventListener("click",
 $("#players").addEventListener("input", () => { $("#playerCount").textContent = parsePlayers().length; });
 $("#drawButton").addEventListener("click", drawTeams);
 $("#redrawButton").addEventListener("click", () => { if (lastPlayers.length) renderTeams(makeTeams(lastPlayers, lastTeamCount)); });
+$("#copyTeamsButton").addEventListener("click", copyTeams);
 document.querySelectorAll("[data-add]").forEach((button) => button.addEventListener("click", () => addPerson(button.dataset.add)));
 $("#newGuestWeek").addEventListener("click", startNewGuestWeek);
 $("#monthlyFee").addEventListener("input", updateFinance);

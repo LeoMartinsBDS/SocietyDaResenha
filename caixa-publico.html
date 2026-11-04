@@ -24,52 +24,65 @@
       </header>
 
       <section id="publicFinance" class="panel active">
-        <div class="section-heading finance-heading">
-          <div>
-            <p class="eyebrow green">FINANCEIRO</p>
-            <h2 id="selectedMonthLabel">Caixa do mês</h2>
-          </div>
-          <div class="finance-controls">
-            <div class="month-picker" aria-label="Mês visualizado">
-              <button id="previousMonth" type="button" title="Mês anterior">‹</button>
-              <input id="selectedMonth" type="month" aria-label="Selecionar mês" />
-              <button id="nextMonth" type="button" title="Próximo mês">›</button>
-            </div>
-          </div>
+        <div id="codeGate" class="code-gate">
+          <p class="eyebrow green">ACESSO</p>
+          <h2>Informe o código do caixa</h2>
+          <p class="field-help">Peça o código de acesso para quem administra o grupo.</p>
+          <form id="codeForm" class="code-gate-form">
+            <input id="publicCode" type="text" maxlength="12" autocomplete="off" placeholder="Ex: AB12CD" required />
+            <button class="primary-button" type="submit">Ver caixa</button>
+          </form>
+          <p id="codeMessage" class="auth-message" aria-live="polite"></p>
         </div>
 
-        <div class="summary-grid">
-          <article class="summary-card fee-summary"><span>Valor da mensalidade</span><strong id="monthlyFeeValue">R$ 0,00</strong><small>Valor cobrado por mensalista</small></article>
-          <article class="summary-card"><span>Total do mês</span><strong id="monthTotal">R$ 0,00</strong><small>Mensalistas + avulsos</small></article>
-          <article class="summary-card cash-summary"><span>Mensalistas recebido</span><strong id="monthlyReceived">R$ 0,00</strong><small id="monthlyProgress">0 mensalistas cadastrados</small></article>
-          <article class="summary-card guest-summary"><span>Avulsos recebido</span><strong id="guestReceived">R$ 0,00</strong><small id="guestProgress">0 avulsos cadastrados</small></article>
-          <article class="summary-card withdrawal-summary"><span>Retirado dos avulsos</span><strong id="guestWithdrawn">R$ 0,00</strong><small id="guestBalance">Saldo: R$ 0,00</small></article>
-          <article class="summary-card total-cash-summary"><span>Caixa total</span><strong id="totalCaixa">R$ 0,00</strong><small>Acumulado até o mês selecionado</small></article>
-        </div>
+        <div id="financeContent" hidden>
+          <div class="section-heading finance-heading">
+            <div>
+              <p class="eyebrow green">FINANCEIRO</p>
+              <h2 id="selectedMonthLabel">Caixa do mês</h2>
+            </div>
+            <div class="finance-controls">
+              <div class="month-picker" aria-label="Mês visualizado">
+                <button id="previousMonth" type="button" title="Mês anterior">‹</button>
+                <input id="selectedMonth" type="month" aria-label="Selecionar mês" />
+                <button id="nextMonth" type="button" title="Próximo mês">›</button>
+              </div>
+            </div>
+          </div>
 
-        <div class="finance-grid">
-          <article class="card people-card">
-            <div class="card-topline">
-              <div><p class="eyebrow green">FIXOS</p><h3>Mensalistas</h3></div>
-            </div>
-            <p class="field-help">Quem já pagou a mensalidade deste mês.</p>
-            <div id="members" class="people-list"></div>
-            <div id="membersEmpty" class="list-empty">Nenhum mensalista cadastrado.</div>
-          </article>
-          <article class="card people-card">
-            <div class="card-topline">
-              <div><p class="eyebrow green">CONVIDADOS</p><h3>Avulsos</h3></div>
-            </div>
-            <p class="field-help">Avulsos pagam semana a semana — o histórico de cada semana fica registrado.</p>
-            <div id="guests" class="guest-weeks"></div>
-            <div id="guestsEmpty" class="list-empty">Nenhum avulso cadastrado.</div>
+          <div class="summary-grid">
+            <article class="summary-card fee-summary"><span>Valor da mensalidade</span><strong id="monthlyFeeValue">R$ 0,00</strong><small>Valor cobrado por mensalista</small></article>
+            <article class="summary-card"><span>Total do mês</span><strong id="monthTotal">R$ 0,00</strong><small>Mensalistas + avulsos</small></article>
+            <article class="summary-card cash-summary"><span>Mensalistas recebido</span><strong id="monthlyReceived">R$ 0,00</strong><small id="monthlyProgress">0 mensalistas cadastrados</small></article>
+            <article class="summary-card guest-summary"><span>Avulsos recebido</span><strong id="guestReceived">R$ 0,00</strong><small id="guestProgress">0 avulsos cadastrados</small></article>
+            <article class="summary-card withdrawal-summary"><span>Retirado dos avulsos</span><strong id="guestWithdrawn">R$ 0,00</strong><small id="guestBalance">Saldo: R$ 0,00</small></article>
+            <article class="summary-card total-cash-summary"><span>Caixa total</span><strong id="totalCaixa">R$ 0,00</strong><small>Acumulado até o mês selecionado</small></article>
+          </div>
 
-            <div class="card-topline withdrawals-topline">
-              <div><p class="eyebrow green">SAÍDAS</p><h3>Retiradas</h3></div>
-            </div>
-            <div id="withdrawals" class="people-list"></div>
-            <div id="withdrawalsEmpty" class="list-empty">Nenhuma retirada registrada.</div>
-          </article>
+          <div class="finance-grid">
+            <article class="card people-card">
+              <div class="card-topline">
+                <div><p class="eyebrow green">FIXOS</p><h3>Mensalistas</h3></div>
+              </div>
+              <p class="field-help">Quem já pagou a mensalidade deste mês.</p>
+              <div id="members" class="people-list"></div>
+              <div id="membersEmpty" class="list-empty">Nenhum mensalista cadastrado.</div>
+            </article>
+            <article class="card people-card">
+              <div class="card-topline">
+                <div><p class="eyebrow green">CONVIDADOS</p><h3>Avulsos</h3></div>
+              </div>
+              <p class="field-help">Avulsos pagam semana a semana — o histórico de cada semana fica registrado.</p>
+              <div id="guests" class="guest-weeks"></div>
+              <div id="guestsEmpty" class="list-empty">Nenhum avulso cadastrado.</div>
+
+              <div class="card-topline withdrawals-topline">
+                <div><p class="eyebrow green">SAÍDAS</p><h3>Retiradas</h3></div>
+              </div>
+              <div id="withdrawals" class="people-list"></div>
+              <div id="withdrawalsEmpty" class="list-empty">Nenhuma retirada registrada.</div>
+            </article>
+          </div>
         </div>
       </section>
 

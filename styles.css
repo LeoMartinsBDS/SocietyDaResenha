@@ -17,7 +17,7 @@ h1,h2,h3 { margin:0; font-family:Outfit,sans-serif; letter-spacing:-.035em; } h1
 
 .header-tools { display:flex; align-items:center; gap:17px; }.account { display:grid; gap:5px; max-width:180px; overflow-wrap:anywhere; text-align:right; color:#d8e3d7; font-size:.76rem; }.account button { padding:0; border:0; color:var(--lime); background:transparent; font-size:.76rem; font-weight:700; }
 .auth-screen { min-height:100vh; display:grid; place-items:center; padding:24px; background:radial-gradient(circle at 15% 8%,#d9f34a80 0 8%,transparent 20%),linear-gradient(135deg,#e8eee1,#f5f4ed); }.auth-card { width:min(100%,430px); padding:34px; border:1px solid #e0e7db; border-radius:22px; background:#fff; box-shadow:0 18px 45px #2953371a; }.auth-ball { display:grid; width:52px; height:52px; place-items:center; margin-bottom:23px; border-radius:14px; background:var(--green); font-size:1.65rem; }.auth-card h1 { margin-bottom:10px; font-size:2.15rem; }.auth-card>p:not(.eyebrow):not(.auth-message) { margin:0 0 24px; color:var(--muted); line-height:1.5; font-size:.9rem; }.auth-card label { display:block; margin:14px 0 6px; color:#4f5d52; font-size:.8rem; font-weight:700; }.auth-card input { width:100%; padding:11px 12px; border:1px solid var(--line); border-radius:8px; outline:0; }.auth-message { min-height:18px; margin:13px 0 0; color:#a55e56; font-size:.8rem; }.auth-message.success { color:var(--green); }.auth-submit { width:100%; margin-top:5px; }.text-button { display:block; margin:15px auto 0; border:0; color:var(--green); background:transparent; font-size:.82rem; font-weight:700; }
-@media (max-width:760px) { .header-tools { gap:9px; }.account { max-width:112px; }.auth-card { padding:27px 22px; } }
+@media (max-width:760px) { .header-tools { gap:9px; flex-wrap:wrap; justify-content:flex-end; }.account { max-width:112px; }.auth-card { padding:27px 22px; }.public-code span { display:none; } }
 
 .public-link { color:var(--lime); font-size:.76rem; font-weight:700; text-decoration:none; }.public-link:hover { text-decoration:underline; }
 .person-view-row { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 12px; border:1px solid var(--line); border-radius:8px; background:#fff; }.person-view-name { min-width:0; overflow:hidden; font-weight:600; text-overflow:ellipsis; white-space:nowrap; }.paid-pill,.pending-pill { flex-shrink:0; padding:4px 10px; border-radius:20px; font-size:.78rem; font-weight:700; white-space:nowrap; }.paid-pill { color:var(--green); background:#e6f3e6; }.pending-pill { color:#9aa19a; background:#f1f2ee; }
@@ -27,6 +27,16 @@ h1,h2,h3 { margin:0; font-family:Outfit,sans-serif; letter-spacing:-.035em; } h1
 
 .summary-card.withdrawal-summary { color:#7a2f28; background:#fbe4e0; }
 .summary-card.total-cash-summary { color:#fff; background:#0d3f66; }
+.code-gate { max-width:420px; margin:40px auto; padding:30px; border:1px solid #e0e7db; border-radius:18px; background:#fff; text-align:center; box-shadow:0 12px 32px #2953371a; }
+.code-gate h2 { margin:0 0 8px; font-size:1.5rem; }
+.code-gate .field-help { margin:0 0 18px; }
+.code-gate-form { display:flex; gap:10px; }
+.code-gate-form input { flex:1; min-width:0; padding:11px 12px; border:1px solid var(--line); border-radius:8px; outline:0; text-transform:uppercase; text-align:center; letter-spacing:.08em; font-weight:700; }
+.public-code { display:flex; align-items:center; gap:7px; color:#d8e3d7; font-size:.76rem; }
+.public-code strong { color:var(--lime); letter-spacing:.08em; font-family:Outfit,sans-serif; }
+.public-code button { padding:0; border:0; color:var(--lime); background:transparent; font-size:.9rem; }
+.public-code button:disabled { opacity:.4; cursor:not-allowed; }
+@media (max-width:760px) { .code-gate { margin:24px auto; padding:24px; }.code-gate-form { flex-direction:column; } }
 .withdrawals-topline { margin-top:20px; padding-top:16px; border-top:1px dashed var(--line); }
 .withdrawal-pill { flex-shrink:0; padding:4px 10px; border-radius:20px; color:#a55e56; background:#fbe4e0; font-size:.78rem; font-weight:700; white-space:nowrap; }
 .guest-history { display:grid; gap:14px; margin-top:18px; padding-top:16px; border-top:1px dashed var(--line); }.guest-weeks { display:grid; gap:14px; }.guest-week-group { display:grid; gap:8px; }.week-heading { display:flex; justify-content:space-between; align-items:baseline; color:var(--muted); font-size:.78rem; font-weight:700; }.week-heading strong { color:var(--ink); font-family:Outfit,sans-serif; font-size:.95rem; }

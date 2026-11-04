@@ -210,6 +210,19 @@ async function saveFinanceToCloud() {
   if (error) console.error("Não foi possível salvar os dados no Supabase:", error.message);
 }
 
+// O caixa guarda o que sobra dos avulsos depois de cobrir a mensalidade,
+// acumulado mês a mês até o mês selecionado.
+function totalCaixaAteMes(key) {
+  return Object.keys(financeStore.months)
+    .filter((monthKey) => monthKey <= key)
+    .reduce((total, monthKey) => {
+      const month = normalizeMonth(financeStore.months[monthKey]);
+      const totalGuests = month.guestWeeks.flatMap((week) => week.guests).reduce((sum, person) => sum + person.payment, 0);
+      const totalWithdrawn = month.guestWithdrawals.reduce((sum, item) => sum + item.payment, 0);
+      return total + totalGuests - totalWithdrawn;
+    }, 0);
+}
+
 function updateSummary(month) {
   const totalMembers = month.members.reduce((sum, person) => sum + person.payment, 0);
   const allGuests = month.guestWeeks.flatMap((week) => week.guests);
@@ -219,6 +232,7 @@ function updateSummary(month) {
   $("#guestReceived").textContent = money(totalGuests);
   $("#guestWithdrawn").textContent = money(totalWithdrawn);
   $("#guestBalance").textContent = `Saldo: ${money(totalGuests - totalWithdrawn)}`;
+  $("#totalCaixa").textContent = money(totalCaixaAteMes(activeMonth));
   $("#monthlyProgress").textContent = `${month.members.length} mensalista${month.members.length === 1 ? "" : "s"} cadastrado${month.members.length === 1 ? "" : "s"}`;
   $("#guestProgress").textContent = `${allGuests.length} avulso${allGuests.length === 1 ? "" : "s"} em ${month.guestWeeks.length} semana${month.guestWeeks.length === 1 ? "" : "s"}`;
   $("#membersEmpty").style.display = month.members.length ? "none" : "block";

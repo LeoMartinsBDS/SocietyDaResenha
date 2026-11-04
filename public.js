@@ -123,6 +123,19 @@ function renderWithdrawals(withdrawals) {
   emptyState.style.display = withdrawals.length ? "none" : "block";
 }
 
+// O caixa guarda o que sobra dos avulsos depois de cobrir a mensalidade,
+// acumulado mês a mês até o mês selecionado.
+function totalCaixaAteMes(key) {
+  return Object.keys(financeStore.months)
+    .filter((monthKey) => monthKey <= key)
+    .reduce((total, monthKey) => {
+      const month = normalizeMonth(financeStore.months[monthKey]);
+      const totalGuests = month.guestWeeks.flatMap((week) => week.guests).reduce((sum, person) => sum + person.payment, 0);
+      const totalWithdrawn = month.guestWithdrawals.reduce((sum, item) => sum + item.payment, 0);
+      return total + totalGuests - totalWithdrawn;
+    }, 0);
+}
+
 function renderFinance() {
   const month = normalizeMonth(financeStore.months[activeMonth]);
   $("#selectedMonth").value = activeMonth;
@@ -140,6 +153,7 @@ function renderFinance() {
   $("#guestProgress").textContent = `${allGuests.length} avulso${allGuests.length === 1 ? "" : "s"} em ${month.guestWeeks.length} semana${month.guestWeeks.length === 1 ? "" : "s"}`;
   $("#guestWithdrawn").textContent = money(totalWithdrawn);
   $("#guestBalance").textContent = `Saldo: ${money(totalGuests - totalWithdrawn)}`;
+  $("#totalCaixa").textContent = money(totalCaixaAteMes(activeMonth));
 
   renderPeople(month.members);
   renderGuestWeeks(month.guestWeeks);

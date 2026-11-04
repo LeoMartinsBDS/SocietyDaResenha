@@ -26,6 +26,7 @@ h1,h2,h3 { margin:0; font-family:Outfit,sans-serif; letter-spacing:-.035em; } h1
 .card-actions { display:flex; gap:8px; }.week-button { padding:8px 11px; border:1px solid #b6d1bd; border-radius:8px; color:var(--green); background:#f5faf4; font-size:.78rem; font-weight:700; white-space:nowrap; }.week-label { margin:2px 0 10px; color:var(--muted); font-size:.76rem; font-weight:600; }
 
 .summary-card.withdrawal-summary { color:#7a2f28; background:#fbe4e0; }
+.summary-card.total-cash-summary { color:#fff; background:#0d3f66; }
 .withdrawals-topline { margin-top:20px; padding-top:16px; border-top:1px dashed var(--line); }
 .withdrawal-pill { flex-shrink:0; padding:4px 10px; border-radius:20px; color:#a55e56; background:#fbe4e0; font-size:.78rem; font-weight:700; white-space:nowrap; }
 .guest-history { display:grid; gap:14px; margin-top:18px; padding-top:16px; border-top:1px dashed var(--line); }.guest-weeks { display:grid; gap:14px; }.guest-week-group { display:grid; gap:8px; }.week-heading { display:flex; justify-content:space-between; align-items:baseline; color:var(--muted); font-size:.78rem; font-weight:700; }.week-heading strong { color:var(--ink); font-family:Outfit,sans-serif; font-size:.95rem; }

@@ -15,6 +15,7 @@ let lastTeams = [];
 let currentUser = null;
 let saveTimer = null;
 let authMode = "login";
+let publicCode = null;
 
 const normalize = (value) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
 const money = (value) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(value) || 0);
@@ -97,6 +98,30 @@ async function copyTeams() {
     window.setTimeout(() => { button.textContent = original; }, 1200);
   } catch (error) {
     console.error("Não foi possível copiar os times:", error);
+  }
+}
+
+async function copyPublicCode() {
+  if (!publicCode) return;
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(publicCode);
+    } else {
+      const textarea = document.createElement("textarea");
+      textarea.value = publicCode;
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.append(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      textarea.remove();
+    }
+    const button = $("#copyPublicCodeButton");
+    const original = button.textContent;
+    button.textContent = "✔";
+    window.setTimeout(() => { button.textContent = original; }, 1200);
+  } catch (error) {
+    console.error("Não foi possível copiar o código:", error);
   }
 }
 
@@ -351,6 +376,13 @@ function getLocalFinance() {
   return { version: 2, months: {} };
 }
 
+function renderPublicCode(code) {
+  publicCode = code || null;
+  $("#publicCodeValue").textContent = publicCode || "——————";
+  $("#publicCaixaLink").href = publicCode ? `caixa-publico.html?codigo=${encodeURIComponent(publicCode)}` : "caixa-publico.html";
+  $("#copyPublicCodeButton").disabled = !publicCode;
+}
+
 async function loadFinance() {
   const localFinance = getLocalFinance();
   if (!currentUser || !supabaseClient) {
@@ -360,7 +392,7 @@ async function loadFinance() {
   }
   const { data, error } = await supabaseClient
     .from("society_data")
-    .select("data")
+    .select("data, public_code")
     .eq("user_id", currentUser.id)
     .maybeSingle();
   if (error) {
@@ -371,6 +403,7 @@ async function loadFinance() {
   } else {
     financeStore = localFinance;
   }
+  renderPublicCode(data?.public_code);
   renderFinance();
   if (!data?.data?.months && !error) saveFinance();
 }
@@ -384,6 +417,7 @@ $("#players").addEventListener("input", () => { $("#playerCount").textContent = 
 $("#drawButton").addEventListener("click", drawTeams);
 $("#redrawButton").addEventListener("click", () => { if (lastPlayers.length) renderTeams(makeTeams(lastPlayers, lastTeamCount)); });
 $("#copyTeamsButton").addEventListener("click", copyTeams);
+$("#copyPublicCodeButton").addEventListener("click", copyPublicCode);
 document.querySelectorAll("[data-add]").forEach((button) => button.addEventListener("click", () => addPerson(button.dataset.add)));
 $("#newGuestWeek").addEventListener("click", startNewGuestWeek);
 $("#monthlyFee").addEventListener("input", updateFinance);

@@ -166,28 +166,63 @@ function setActiveMonth(key) {
   renderFinance();
 }
 
-async function loadPublicFinance() {
+const CODE_STORAGE_KEY = "societyPublicCode";
+
+function showGate(message = "") {
+  $("#codeGate").hidden = false;
+  $("#financeContent").hidden = true;
+  $("#codeMessage").textContent = message;
+}
+
+function showFinanceContent() {
+  $("#codeGate").hidden = true;
+  $("#financeContent").hidden = false;
+}
+
+// Tenta carregar o caixa do código informado. Devolve true/false conforme o
+// código seja válido, para quem chamou decidir se deve guardá-lo ou não.
+async function loadPublicFinance(code) {
   if (!supabaseClient) {
     showMessage("Configure a URL e a chave pública no arquivo supabase-config.js para carregar o caixa.");
-    return;
+    return false;
   }
-  const { data, error } = await supabaseClient.rpc("get_public_cash_flow");
+  const { data, error } = await supabaseClient.rpc("get_public_cash_flow", { code });
   if (error) {
     console.error("Não foi possível carregar o caixa público:", error.message);
-    showMessage("Não foi possível carregar o caixa agora. Tente novamente mais tarde.");
-    return;
+    showGate("Não foi possível carregar o caixa agora. Tente novamente mais tarde.");
+    return false;
   }
   if (!data?.months) {
-    showMessage("Nenhum dado de caixa disponível ainda.");
-    return;
+    showGate("Código inválido. Confira com quem administra o grupo.");
+    return false;
   }
   financeStore = data;
   renderFinance();
+  showFinanceContent();
+  return true;
 }
+
+async function tryAccessCode(code) {
+  const trimmed = (code || "").trim();
+  if (!trimmed) { showGate(); return; }
+  const ok = await loadPublicFinance(trimmed);
+  if (ok) localStorage.setItem(CODE_STORAGE_KEY, trimmed.toUpperCase());
+  else localStorage.removeItem(CODE_STORAGE_KEY);
+}
+
+$("#codeForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const input = $("#publicCode");
+  const submitButton = event.target.querySelector("button");
+  submitButton.disabled = true;
+  await tryAccessCode(input.value);
+  submitButton.disabled = false;
+});
 
 $("#selectedMonth").addEventListener("change", (event) => setActiveMonth(event.target.value));
 $("#previousMonth").addEventListener("click", () => setActiveMonth(shiftMonth(activeMonth, -1)));
 $("#nextMonth").addEventListener("click", () => setActiveMonth(shiftMonth(activeMonth, 1)));
 
 renderFinance();
-loadPublicFinance();
+const urlCode = new URLSearchParams(window.location.search).get("codigo");
+tryAccessCode(urlCode || localStorage.getItem(CODE_STORAGE_KEY));

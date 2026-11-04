@@ -37,7 +37,12 @@
         </div>
         <div class="header-tools">
           <a class="public-link" href="index.html">‹ Início</a>
-          <a class="public-link" href="caixa-publico.html" target="_blank" rel="noopener">Ver caixa público ↗</a>
+          <a id="publicCaixaLink" class="public-link" href="caixa-publico.html" target="_blank" rel="noopener">Ver caixa público ↗</a>
+          <div class="public-code" title="Código para quem quiser consultar o caixa público">
+            <span>Código do caixa</span>
+            <strong id="publicCodeValue">——————</strong>
+            <button id="copyPublicCodeButton" type="button" title="Copiar código" disabled>📋</button>
+          </div>
           <div class="account"><span id="userEmail"></span><button id="logoutButton" type="button">Sair</button></div>
           <div class="ball-mark" aria-hidden="true">⚽</div>
         </div>
